@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/grpc-ecosystem/grpc-gateway v1.9.0
+	github.com/tommy-sho/golang-sandbox v0.0.0-20190526035816-e30de07e0997
 	golang.org/x/net v0.0.0-20190522155817-f3200d17e092 // indirect
 	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f // indirect
 	golang.org/x/sys v0.0.0-20190526031047-e44a3b55db15 // indirect
