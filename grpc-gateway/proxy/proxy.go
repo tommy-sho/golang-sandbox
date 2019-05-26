@@ -5,7 +5,7 @@ import (
 	"flag"
 	"net/http"
 
-	task "github.com/tommy-sho/golang-sandbox/grpc-gateway/gateway"
+	gw "github.com/tommy-sho/golang-sandbox/grpc-gateway/proto"
 
 	"github.com/golang/glog"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	tasklistEndpoint = flag.String("tasklist_endpoint", "localhost:50051", "endpoint of YourService")
+	tasklistEndpoint = flag.String("tasklist_endpoint", "localhost:10000", "endpoint of YourService")
 )
 
 func run() error {
@@ -23,7 +23,9 @@ func run() error {
 
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
-	err := task.RegisterTaskManagerHandlerFromEndpoint(ctx, mux, *tasklistEndpoint, opts)
+	err :=
+		//RegisterTaskManagerHandlerFromEndpoint(ctx, mux, *tasklistEndpoint, opts)
+
 	if err != nil {
 		return err
 	}

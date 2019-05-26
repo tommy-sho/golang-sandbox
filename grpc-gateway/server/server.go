@@ -9,11 +9,11 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	task "github.com/tommy-sho/golang-sandbox/grpc-gateway/genproto"
+	task "github.com/tommy-sho/golang-sandbox/grpc-gateway/proto"
 )
 
 const (
-	port = "10000"
+	port = ":10000"
 )
 
 var tasks = []*task.Task{
