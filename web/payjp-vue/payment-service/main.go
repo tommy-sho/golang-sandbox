@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	port = ":50001"
+	port = ":50051"
 )
 
 type paymentServer struct{}
