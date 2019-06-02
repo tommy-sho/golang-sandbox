@@ -7,9 +7,9 @@ import (
 
 type User struct {
 	ID        string
-	Age       int
-	FirstName string
-	LastName  string
+	Age       int    `validate:"required,min=0"`
+	FirstName string `validate:"required"`
+	LastName  string `validate:"required"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
