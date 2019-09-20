@@ -1,28 +1,30 @@
 package main
 
-
 import (
 	"context"
 	"encoding/json"
-	"google.golang.org/genproto/googleapis/logging/v2"
+	"fmt"
 	"os"
-	"golang.org/x/xerrors"
+
 	"github.com/nlopes/slack"
 	"github.com/pkg/errors"
+	"golang.org/x/xerrors"
 )
 
 var (
 	SlackWebhookURL string
+	Color           = map[string]string{
+		"DEBUG":    "#4175e1",
+		"INFO":     "#76a9fa",
+		"WARNING":  "warning",
+		"ERROR":    "danger",
+		"CRITICAL": "#ff0000",
+	}
 )
 
 // PubSubMessage is the payload of a Pub/Sub event.
 type PubSubMessage struct {
 	Data []byte `json:"data"`
-}
-
-
-type JsonPayload struct {
-	field map[string]interface{}
 }
 
 func init() {
@@ -31,33 +33,40 @@ func init() {
 
 // この変数が呼ばれる
 func Subscribe(ctx context.Context, m PubSubMessage) error {
-	entry, err := convert2LogEntry(m.Data)
+	stdMeg, err := unmarshal(m.Data)
 	if err != nil {
-		return err
+		return xerrors.Errorf("can't unmarshal stackdriver message: %w", err)
 	}
-	msg := buildMessage(entry)
+	msg := buildMessage(stdMeg)
 	err = postWebhook(SlackWebhookURL, msg)
 	if err != nil {
-		return errors.Errorf("Failed to send a message to Slack: %s", err)
+		return errors.Errorf("Failed to send a message to Slack: %v", err)
 	}
 
 	return nil
 }
 
-func convert2LogEntry(data []byte) (*logging.LogEntry, error) {
-	entry := new(logging.LogEntry)
-	err := json.Unmarshal(data, entry)
+// stackdriverのログをunmarshal
+func unmarshal(data []byte) (Message, error) {
+	msg := Message{}
+	err := json.Unmarshal(data, &msg)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to unmarshal: %w", err)
+		return msg, xerrors.Errorf("failed to unmarshal: %v, ", err)
 	}
-	err = json.Unmarshal(entry.JsonPayload
-	return entry, err
+	return msg, err
 }
 
-func buildMessage(entry *logging.LogEntry) *slack.WebhookMessage {
+//skackへpostするメッセージを組み立てる
+func buildMessage(msg Message) *slack.WebhookMessage {
 	return &slack.WebhookMessage{
-		Text:        entry.InsertId,
-		Attachments: []slack.Attachment{},
+		Text: fmt.Sprintf("%sで%sが発生しました", msg.Resource.Labels.ClusterName, msg.Severity), // メッセージは環境変数で渡すのがいいかも
+		Attachments: []slack.Attachment{
+			{
+				Color:   Color[msg.Severity],
+				Pretext: msg.ReceiveTimestamp,
+				Text:    msg.JsonPayload.Msg,
+			},
+		},
 	}
 }
 
