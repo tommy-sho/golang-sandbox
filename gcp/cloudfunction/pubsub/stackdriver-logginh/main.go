@@ -56,15 +56,15 @@ func unmarshal(data []byte) (Message, error) {
 	return msg, err
 }
 
-//skackへpostするメッセージを組み立てる
+//slackへpostするメッセージを組み立てる
 func buildMessage(msg Message) *slack.WebhookMessage {
 	return &slack.WebhookMessage{
-		Text: fmt.Sprintf("%sで%sが発生しました", msg.Resource.Labels.ClusterName, msg.Severity), // メッセージは環境変数で渡すのがいいかも
 		Attachments: []slack.Attachment{
 			{
-				Color:   Color[msg.Severity],
-				Pretext: msg.ReceiveTimestamp,
-				Text:    msg.JsonPayload.Msg,
+				Title: fmt.Sprintf("%sでエラーが発生しました", msg.Resource.Labels.ContainerName),
+				Color: Color[msg.Severity],
+				Text:  msg.JsonPayload.Msg,
+				Ts:    json.Number(msg.ReceiveTimestamp),
 			},
 		},
 	}
