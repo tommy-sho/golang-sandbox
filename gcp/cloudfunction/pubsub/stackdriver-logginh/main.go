@@ -7,13 +7,13 @@ import (
 	"os"
 
 	"github.com/nlopes/slack"
-	"github.com/pkg/errors"
 	"golang.org/x/xerrors"
 )
 
 var (
 	SlackWebhookURL string
-	Color           = map[string]string{
+	// エラーレベルに応じたSlackメッセージの色
+	Color = map[string]string{
 		"DEBUG":    "#4175e1",
 		"INFO":     "#76a9fa",
 		"WARNING":  "warning",
@@ -22,7 +22,7 @@ var (
 	}
 )
 
-// PubSubMessage is the payload of a Pub/Sub event.
+// PubSubMessage はPubsubから取得したデータ.
 type PubSubMessage struct {
 	Data []byte `json:"data"`
 }
@@ -31,16 +31,18 @@ func init() {
 	SlackWebhookURL = os.Getenv("WEBHOOK_URL")
 }
 
-// この変数が呼ばれる
+// CloudFunctionの呼び出し関数にSubscribeを設定する
 func Subscribe(ctx context.Context, m PubSubMessage) error {
 	stdMeg, err := unmarshal(m.Data)
 	if err != nil {
 		return xerrors.Errorf("can't unmarshal stackdriver message: %w", err)
 	}
+
 	msg := buildMessage(stdMeg)
+
 	err = postWebhook(SlackWebhookURL, msg)
 	if err != nil {
-		return errors.Errorf("Failed to send a message to Slack: %v", err)
+		return xerrors.Errorf("Failed to send a message to Slack: %v", err)
 	}
 
 	return nil
@@ -63,8 +65,8 @@ func buildMessage(msg Message) *slack.WebhookMessage {
 			{
 				Title: fmt.Sprintf("%sでエラーが発生しました", msg.Resource.Labels.ContainerName),
 				Color: Color[msg.Severity],
-				Text:  msg.JsonPayload.Msg,
-				Ts:    json.Number(msg.ReceiveTimestamp),
+				Text:  msg.JsonPayload.Msg, // 実際のエラー内容等が入る
+				Ts:    json.Number(msg.Timestamp),
 			},
 		},
 	}

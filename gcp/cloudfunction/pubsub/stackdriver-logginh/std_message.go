@@ -1,11 +1,11 @@
 package main
 
 type Message struct {
-	InsertId         string      `json:"insertId"`
-	JsonPayload      JsonPayload `json:"jsonPayload"`
-	ReceiveTimestamp string      `json:"receiveTimestamp"`
-	Resource         Resource    `json:"resource"`
-	Severity         string      `json:"severity"`
+	InsertId    string      `json:"insertId"`
+	JsonPayload JsonPayload `json:"jsonPayload"`
+	Resource    Resource    `json:"resource"`
+	Severity    string      `json:"severity"`
+	Timestamp   string      `json:"timestamp"`
 }
 
 type JsonPayload struct {

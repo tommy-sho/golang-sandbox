@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 )
 
@@ -22,7 +23,8 @@ func TestMessageUnmarshal(t *testing.T) {
    "project_id":  "vega-177606"    ,
    "zone":  "asia-east1-a"
   }},
- "severity":  "ERROR"
+ "severity":  "ERROR",
+ "timestamp": "2019-09-24T02:05:03.697532774Z"
 }`
 	t.Run("unmarshal", func(t *testing.T) {
 		msg := Message{}
@@ -36,5 +38,6 @@ func TestMessageUnmarshal(t *testing.T) {
 		if msg.Severity != "ERROR" {
 			t.Errorf("unmatch value[severity]: %v", err)
 		}
+		fmt.Println(msg)
 	})
 }
