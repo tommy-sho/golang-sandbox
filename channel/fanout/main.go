@@ -29,16 +29,6 @@ func main() {
 		close(b)
 	}()
 	go Merge(out, a, b)
-	//go func() {
-	//	var ok bool
-	//	var v int
-	//	for !ok {
-	//		select {
-	//		case v, ok = <-out:
-	//			fmt.Println(v)
-	//		}
-	//	}
-	//}()
 	go func() {
 		for {
 			v, ok := <-out
