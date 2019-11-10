@@ -1,0 +1,10 @@
+```uml
+@startuml
+
+{{ range $i, $val := .Struct }}
+object {{$val.Name}}{{range $val.Fields}}
+{{$val.Name}} : {{.Name}}{{end}}
+{{end}}
+
+@enduml
+```
