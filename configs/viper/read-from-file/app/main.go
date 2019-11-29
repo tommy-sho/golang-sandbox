@@ -20,7 +20,7 @@ var (
 // Read the config file from the current directory and marshal
 // into the conf config struct.
 func getConf() *config {
-	viper.AddConfigPath("./conf")
+	viper.AddConfigPath("./../../../")
 	viper.SetConfigName("config")
 	err := viper.ReadInConfig()
 
