@@ -8,11 +8,18 @@ import (
 )
 
 type Data struct {
-	Struct []Struct
+	Struct  []Struct
+	Combine []Combine
+}
+
+type Combine struct {
+	Original string
+	Port     string
 }
 
 type Struct struct {
 	Name   string
+	Type   string
 	Fields []Field
 }
 
