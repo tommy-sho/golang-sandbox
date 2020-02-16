@@ -1,0 +1,6 @@
+[server]
+    name = "sample"
+    port = "8080"
+
+[other]
+    text = "This is sample text"

@@ -1,0 +1,12 @@
+```uml
+@startuml
+
+{{ range $i, $val := .Struct }}
+object {{$val.Name}}{{range $val.Fields}}
+{{$val.Name}} : {{.Name}}{{end}}
+{{end}}
+
+{{ range $i, $val := .Combine}}{{$val.Original}} -> {{$val.Port}}{{end}}
+
+@enduml
+```
