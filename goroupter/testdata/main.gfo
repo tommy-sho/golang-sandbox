@@ -1,0 +1,22 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"golang.org/x/tools/imports"
+	"go/ast"
+	"github.com/kelseyh/hogehoge"
+	"go/parser"
+	"go/token"
+)
+
+func main() {
+fmt.N()
+ast.Sring()
+errors.New()
+hogehoge.S()
+imports.N()
+parse.I()
+parser.G()
+token.T()
+}
