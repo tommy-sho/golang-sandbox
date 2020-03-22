@@ -1,23 +1,29 @@
 package main
 
 import (
+	"bytes"
 	"errors"
-	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 
-	"github.com/kelseyh/hogehoge"
+	"github.com/tommy-sho/grouper"
+
+	"golang.org/x/tools/go/ast/astutil"
+
+	"fmt"
+
 	"golang.org/x/tools/imports"
 )
 
 func main() {
-	fmt.N()
-	ast.Sring()
+	// test
+	grouper.M()
+
+	bytes.N()
+	astutil.Sring()
 	errors.New()
-	hogehoge.S()
-	imports.N()
-	parse.I()
+	imports.S()
+	//te
+	tennstu.N()
+	fmt.I()
 	parser.G()
 	token.T()
 }

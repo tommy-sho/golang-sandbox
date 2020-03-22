@@ -8,7 +8,6 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
-	"golang.org/x/tools/go/ast/astutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -16,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/imports"
 )
 
@@ -128,13 +128,12 @@ func processFile(filePath string, reader io.Reader, writer io.Writer, arg argTyp
 
 	target := filePath
 
-	// ここでimportの並び替えが必要
 	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, filePath, src, 0)
+	f, err := parser.ParseFile(fset, filePath, src, parser.ParseComments)
 	if err != nil {
 		return err
 	}
-	 var paths []value
+	var paths []value
 	ast.Inspect(f, func(n ast.Node) bool {
 		if v, ok := n.(*ast.ImportSpec); ok {
 			p := value{
@@ -143,21 +142,27 @@ func processFile(filePath string, reader io.Reader, writer io.Writer, arg argTyp
 			if v.Name != nil {
 				p.name = v.Name.Name
 			}
-			paths = append(paths,p)
+			paths = append(paths, p)
 		}
 		return true
 	})
+	ast.Print(fset, f)
+	fmt.Println(f.Comments[0])
 
 	for _, path := range paths {
 		t, _ := strconv.Unquote(path.path)
+		if path.name != "" {
+			astutil.DeleteNamedImport(fset, f, path.name, t)
+			continue
+		}
+
 		astutil.DeleteImport(fset, f, t)
 	}
 
 	for _, path := range paths {
 		t, _ := strconv.Unquote(path.path)
-		astutil.AddNamedImport(fset,f,path.name,t)
+		astutil.AddNamedImport(fset, f, path.name, t)
 	}
-
 
 	var buf bytes.Buffer
 	pp := &printer.Config{Tabwidth: 8, Mode: printer.UseSpaces | printer.TabIndent}
