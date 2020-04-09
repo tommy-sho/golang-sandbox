@@ -1,11 +1,13 @@
-module github.com/tommy-sho/telepresence-with-envoy/gateway
+module github.com/tommy-sho/golang-sandbox/prometheus-go/gateway
 
 go 1.14
 
 require (
-	github.com/golang/protobuf v1.2.1-0.20181127190454-8d0c54c12466 // indirect
+	github.com/globocom/echo-prometheus v0.1.2
+	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/labstack/echo v3.3.10+incompatible
-	github.com/labstack/gommon v0.2.9 // indirect
-	github.com/tommy-sho/telepresence-with-envoy v0.0.0-20190721144626-961b01734f0c
-	google.golang.org/grpc v1.22.0
+	github.com/prometheus/client_golang v1.5.1
+	github.com/stretchr/testify v1.5.1 // indirect
+	github.com/tommy-sho/k8s-grpc-health-check v0.0.0-20190727114142-a542bcb17795
+	google.golang.org/grpc v1.28.0
 )

@@ -4,7 +4,7 @@ ENV PROJECT /github.com/tommy-sho/golang-sandbox/prometheus-go/server
 WORKDIR /go/src/$PROJECT
 
 ENV GO111MODULE on
-COPY .. .
+COPY . .
 RUN go install .
 
 FROM alpine as release

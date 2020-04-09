@@ -10,14 +10,29 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/labstack/echo"
-	"github.com/tommy-sho/telepresence-with-envoy/proto"
+	echoPrometheus "github.com/globocom/echo-prometheus"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/labstack/echo/v4"
 	"google.golang.org/grpc"
+
+	"github.com/tommy-sho/k8s-grpc-health-check/proto"
 )
 
 const (
-	port = "50002"
+	port     = ":8080"
+	promAddr = ":9090"
 )
+
+var backendPort string
+
+func init() {
+	backendPort = os.Getenv("ENDPOINT")
+	if backendPort == "" {
+		backendPort = ":50001"
+	}
+}
 
 type Request struct {
 	Name string `json:"name" form:"name" query:"name"`
@@ -29,9 +44,12 @@ type Response struct {
 }
 
 func main() {
-	ctx := context.Background()
+	dialOpts := []grpc.DialOption{
+		grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+	}
 
-	bConn, err := grpc.DialContext(ctx, fmt.Sprintf("%s:%s", os.Getenv("BACKEND_HOST"), os.Getenv("BACKEND_PORT")), grpc.WithInsecure())
+	bConn, err := grpc.Dial(backendPort, dialOpts...)
 	if err != nil {
 		panic(fmt.Errorf("failed to connect with backend server error : %v ", err))
 	}
@@ -40,9 +58,24 @@ func main() {
 
 	bClient := proto.NewBackendServerClient(bConn)
 
+	var configMetrics = echoPrometheus.NewConfig()
+	configMetrics.Namespace = "namespace"
+	configMetrics.Buckets = []float64{
+		0.0005, // 0.5ms
+		0.001,  // 1ms
+		0.005,  // 5ms
+		0.01,   // 10ms
+		0.05,   // 50ms
+		0.1,    // 100ms
+		0.5,    // 500ms
+		1,      // 1s
+		2,      // 2s
+	}
 	e := echo.New()
 	e.GET("/greeting", Greeting(bClient))
 	e.GET("/healthz", Pong)
+	e.Use(echoPrometheus.MetricsMiddlewareWithConfig(configMetrics))
+	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan,
@@ -50,6 +83,16 @@ func main() {
 		syscall.SIGINT,
 		syscall.SIGTERM,
 	)
+
+	mux := http.NewServeMux()
+	// Enable histogram
+	grpc_prometheus.EnableClientHandlingTimeHistogram()
+	mux.Handle("/metrics", promhttp.Handler())
+	go func() {
+		fmt.Println("Prometheus metrics bind address:", promAddr)
+		log.Fatal(http.ListenAndServe(promAddr, mux))
+	}()
+
 	go func() {
 		<-stopChan
 		if err := e.Close(); err != nil {
@@ -59,7 +102,7 @@ func main() {
 
 	errors := make(chan error)
 	go func() {
-		errors <- e.Start(fmt.Sprintf(":%s", port))
+		errors <- e.Start(port)
 	}()
 
 	if err := <-errors; err != nil {
