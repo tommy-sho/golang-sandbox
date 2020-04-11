@@ -10,6 +10,11 @@ import (
 	"syscall"
 	"time"
 
+	grpc_ratelimit "github.com/grpc-ecosystem/go-grpc-middleware/ratelimit"
+	"go.uber.org/ratelimit"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	echoPrometheus "github.com/globocom/echo-prometheus"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -24,6 +29,37 @@ const (
 	port     = ":8080"
 	promAddr = ":9090"
 )
+
+type T struct {
+	count   int
+	limiter ratelimit.Limiter
+}
+
+func (t *T) Limit() bool {
+	t.count++
+	fmt.Printf("count: %d\n", t.count)
+	t.limiter.Take()
+	return false
+}
+
+func NewRateLimiter(t int) *T {
+	return &T{
+		count:   0,
+		limiter: ratelimit.New(t),
+	}
+}
+
+func UnaryClientInterceptor(limiter grpc_ratelimit.Limiter) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		if limiter.Limit() {
+			return status.Errorf(codes.ResourceExhausted, "%s is rejected by grpc_ratelimit middleware, please retry later.", method)
+		}
+
+		log.Printf("method: %v", method)
+
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
+}
 
 var backendPort string
 
@@ -47,6 +83,7 @@ func main() {
 	dialOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithUnaryInterceptor(UnaryClientInterceptor(NewRateLimiter(20))),
 	}
 
 	bConn, err := grpc.Dial(backendPort, dialOpts...)

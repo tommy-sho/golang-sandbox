@@ -7,7 +7,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	pb "github.com/tommy-sho/golang-sandbox/rate_limit/leaky_bucket/grpc/proto"
+	pb "google.golang.org/grpc/examples/helloworld/helloworld"
 )
 
 const (
