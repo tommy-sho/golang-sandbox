@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 func main() {}
 
 func mapWithMake(in []int) {
@@ -12,6 +14,8 @@ func mapWithMake(in []int) {
 func mapWithNoMake(in []int) {
 	s := map[int]int{}
 	for n := range in {
+		fmt.Println(len(s))
 		s[in[n]] = in[n]
 	}
+
 }

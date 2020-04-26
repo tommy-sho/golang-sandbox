@@ -42,6 +42,9 @@ func BenchmarkMake1000(b *testing.B) {
 	mapWithMake(thousand)
 }
 
+func TestMake(t *testing.T) {
+	mapWithNoMake(hundred)
+}
 func createInput(in int) []int {
 	s := make([]int, in)
 	for i := 0; i < in; i++ {
