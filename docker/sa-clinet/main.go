@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 
 	"github.com/docker/docker/api/types/container"
 
@@ -24,16 +26,16 @@ func main() {
 	}
 
 	defer cli.ClientVersion()
-	//
-	//reader, err := cli.ImagePull(ctx, "docker.io/library/alpine", types.ImagePullOptions{})
-	//if err != nil {
-	//	panic(err)
-	//}
-	//io.Copy(os.Stdout, reader)
-	//
+
+	reader, err := cli.ImagePull(ctx, "docker.io/library/golang:1.12.0", types.ImagePullOptions{})
+	if err != nil {
+		panic(err)
+	}
+	io.Copy(os.Stdout, reader)
+
 	body, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: "alpine",
-		Cmd:   []string{"echo", "hello, world"},
+		Image: "golang:1.12.0",
+		Cmd:   []string{"sh"},
 		Tty:   true,
 	}, nil, nil, "")
 	if err != nil {
@@ -46,13 +48,6 @@ func main() {
 
 	fmt.Println("container id is ", body.ID, body.Warnings)
 
-	cid, err := cli.ContainerWait(ctx, body.ID)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("cid is ", cid)
-
 	out, err := cli.ContainerLogs(ctx, body.ID, types.ContainerLogsOptions{
 		ShowStdout: true,
 	})
@@ -64,14 +59,5 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(string(b))
-}
 
-func exist(s []string, target string) bool {
-	for i := range s {
-		if target == s[i] {
-			return true
-		}
-	}
-
-	return false
 }
