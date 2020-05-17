@@ -5,8 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 	"time"
+
+	"golang.org/x/sync/errgroup"
+
+	"github.com/coreos/etcd/etcdserver/stats"
+
+	"github.com/coreos/etcd/pkg/types"
 
 	"github.com/coreos/etcd/raft/raftpb"
 
@@ -30,6 +39,18 @@ type RaftAlg struct {
 	peers  []string
 	waldir string
 }
+
+func (r *RaftAlg) Process(ctx context.Context, m raftpb.Message) error {
+	return r.node.Step(ctx, m)
+}
+
+func (r *RaftAlg) IsIDRemoved(id uint64) bool {
+	return false
+}
+
+func (r *RaftAlg) ReportUnreachable(id uint64) {}
+
+func (r *RaftAlg) ReportSnapshot(id uint64, status raft.SnapshotStatus) {}
 
 func New(id int, peers []string) *RaftAlg {
 	return &RaftAlg{
@@ -74,6 +95,38 @@ func (r *RaftAlg) Run(ctx context.Context) error {
 		r.node = raft.StartNode(c, rpeers)
 	}
 
+	r.transport = &rafthttp.Transport{
+		ID:          types.ID(r.id),
+		ClusterID:   0x1000,
+		Raft:        r,
+		ServerStats: stats.NewServerStats("", ""),
+		LeaderStats: stats.NewLeaderStats(strconv.Itoa(r.id)),
+		ErrorC:      make(chan error),
+	}
+
+	if err := r.transport.Start(); err != nil {
+		return err
+	}
+
+	for i := range r.peers {
+		if i+1 != r.id {
+			r.transport.AddPeer(types.ID(i+1), []string{r.peers[i]})
+		}
+	}
+
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		return r.serveRaftHTTP(ctx)
+	})
+
+	eg.Go(func() error {
+		return r.serveChannels(ctx)
+	})
+
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("tryaft: stop serving Raft: %w", err)
+	}
+
 	return nil
 }
 
@@ -116,4 +169,72 @@ func (r *RaftAlg) publishEntries(ctx context.Context, ents []raftpb.Entry) error
 	}
 
 	return nil
+}
+
+func (r *RaftAlg) serveRaftHTTP(ctx context.Context) error {
+	url, err := url.Parse(r.peers[r.id-1])
+	if err != nil {
+		return fmt.Errorf("failed parsing URL: %w", err)
+	}
+
+	srv := http.Server{Addr: url.Host, Handler: r.transport.Handler()}
+
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		return srv.ListenAndServe()
+	})
+
+	<-ctx.Done()
+	sCtx, sCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer sCancel()
+
+	if err := srv.Shutdown(sCtx); err != nil {
+		return err
+	}
+
+	return eg.Wait()
+}
+
+func (r *RaftAlg) serveChannels(ctx context.Context) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			r.node.Tick()
+
+		case rd := <-r.node.Ready():
+
+			_ = r.wal.Save(rd.HardState, rd.Entries)
+			_ = r.raftStorage.Append(rd.Entries)
+
+			r.transport.Send(rd.Messages)
+
+			err := r.publishEntries(ctx, rd.CommittedEntries)
+			if err != nil {
+				return err
+			}
+
+		case err := <-r.transport.ErrorC:
+			return err
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+func (r *RaftAlg) Commit() <-chan string {
+	return r.commitC
+}
+
+func (r *RaftAlg) DoneReplayWAL() <-chan struct{} {
+	return r.doneRestoreLogC
+}
+
+func (r *RaftAlg) Propose(prop []byte) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	return r.node.Propose(ctx, prop)
 }
